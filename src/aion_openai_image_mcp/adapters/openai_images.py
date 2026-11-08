@@ -28,8 +28,9 @@ class OpenAIImages:
             if not re.fullmatch(r"[1-9][0-9]{0,4}x[1-9][0-9]{0,4}", request.size):
                 raise ProviderError("generation_failed")
             payload["size"] = request.size
-        if request.preset in profile.quality:
-            payload["quality"] = profile.quality[request.preset]
+        quality = profile.quality.get(request.preset, profile.options.get("default_quality"))
+        if quality is not None:
+            payload["quality"] = quality
         url = profile.connection.base_url + "/images/"
         if request.images:
             if not profile.supports_edits:

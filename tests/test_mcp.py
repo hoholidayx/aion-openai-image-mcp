@@ -92,7 +92,10 @@ def test_streamable_http_generates_edits_and_resumes(tmp_path):
     try:
         connection = Connection(f"http://127.0.0.1:{supplier.server_port}/v1", "synthetic-supplier")
         profiles = {
-            "sample": Profile("sample", "openai_images", connection, "example-image", True, {"fast": "low"}),
+            "sample": Profile(
+                "sample", "openai_images", connection, "example-image", True,
+                {"fast": "low"}, {"default_quality": "high"},
+            ),
             "other": Profile("other", "openai_images", connection, "other-image"),
         }
         config = Config(tmp_path, "synthetic-mcp", profiles)
@@ -127,6 +130,7 @@ def test_streamable_http_generates_edits_and_resumes(tmp_path):
         assert json.loads(generate[2]) == {"model": "example-image", "prompt": "A blue square", "quality": "low"}
         assert edit[0:2] == ("/v1/images/edits", "Bearer synthetic-supplier")
         assert edit[2].index(b"reference-1.png") < edit[2].index(b"reference-2.png")
+        assert b'name="quality"\r\n\r\nhigh\r\n' in edit[2]
         assert generate[3] is None and edit[3] is None
         assert supplier.downloads == [("/generated.png", None, None)]
     finally:

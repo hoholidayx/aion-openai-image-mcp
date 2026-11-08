@@ -24,6 +24,8 @@ uv run --locked aion-image-mcp-service stop
 
 管理命令支持 `--config PATH`。服务默认监听 `127.0.0.1:8790`，与 Aion Web 独立启停。默认数据在 `~/.aion-openai-image-mcp/`，管理日志在 `service/mcp.log`。健康接口是 `/healthz`。启动和重启需要相同的供应商环境变量，停止和状态检查无需密钥。
 
+若凭据保存在私有 `.env` 文件，启动和重启时用 uv 加载，例如 `uv run --locked --env-file ~/.aion-openai-image-mcp/.env aion-image-mcp-service start`。
+
 ## 导入 Aion
 
 在「设置 → 工具 → MCP」导入以下 JSON，将占位令牌替换成实际的 MCP 访问令牌，并启用入口。URL 最后一段是 profile 名，多个 profile 分别导入。全局默认只设一个。
@@ -44,7 +46,7 @@ uv run --locked aion-image-mcp-service stop
 
 ## 适配与恢复
 
-- 首版 `openai_images` 使用 Base URL 下的 `/images/generations` 和 `/images/edits`。开启 `supports_edits` 才接受 PNG 参考图。尺寸支持 `auto` 或 `WIDTHxHEIGHT`，不传尺寸时由供应商决定。可选的 `quality` 映射将 Aion 的 `fast` 和 `quality` 转成上游值。
+- 首版 `openai_images` 使用 Base URL 下的 `/images/generations` 和 `/images/edits`。开启 `supports_edits` 才接受 PNG 参考图。尺寸支持 `auto` 或 `WIDTHxHEIGHT`，不传尺寸时由供应商决定。可选的 `quality` 映射将 Aion 的 `fast` 和 `quality` 转成上游值。没有命中映射时可以通过 profile 的 `options.default_quality` 设置默认质量。
 - 输出接收单张 PNG 的 `b64_json` 或 URL。下载只允许供应商来源及显式配置的 CDN 来源，不转发供应商令牌，也不跟随重定向。供应商连接默认使用 HTTPS，环回地址可用于本机模拟和本地服务。
 - 增加供应商时，在 `adapters/` 实现自己的请求和结果映射，在显式注册表加入 adapter ID，再为它配置 profile。专用参数可放在 profile 的 `options` 表，额外凭据用连接的 `secret_env` 表映射到环境变量。MCP 的三个工具和 SQLite 任务处理可复用。
 - Aion 重启不会影响独立 worker。MCP 自己重启后继续处理未发出的请求。对已发出且无法确认结果的付费请求返回 `submission_uncertain`，不重发。图片在 MCP 保留七天，已被 Aion 取回的图片继续由原会话保存。过期任务保留轻量幂等记录。

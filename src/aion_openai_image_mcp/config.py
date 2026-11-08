@@ -124,6 +124,9 @@ def load_config(path: Path = DEFAULT_CONFIG, *, require_credentials: bool = True
             if not isinstance(options, dict):
                 raise ValueError("Adapter options must be a table")
             json.dumps(options, allow_nan=False)
+            if adapter == "openai_images" and "default_quality" in options:
+                if options["default_quality"] not in ("low", "medium", "high", "auto"):
+                    raise ValueError("OpenAI default_quality must be low, medium, high, or auto")
             profiles[name] = Profile(name, adapter, connections[connection_name], model, edits, quality, options)
         if not profiles:
             raise ValueError("Configure at least one image profile")
