@@ -14,6 +14,7 @@ import sys
 import time
 from pathlib import Path
 
+from .adapters import validate_profiles
 from .config import DEFAULT_CONFIG, SERVICE, load_config
 
 
@@ -242,7 +243,10 @@ def main():
     os.umask(0o077)
     try:
         config_path = options.config.expanduser().resolve()
-        config = load_config(config_path, require_credentials=options.action in ("start", "restart"))
+        starting = options.action in ("start", "restart")
+        config = load_config(config_path, require_credentials=starting)
+        if starting:
+            validate_profiles(config)
         service = ServiceManager(config_path, config)
         service.directory.mkdir(parents=True, exist_ok=True)
         with service.state.with_suffix(".lock").open("a") as lock:

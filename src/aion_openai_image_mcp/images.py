@@ -14,6 +14,13 @@ MAX_REQUEST_BODY = 48 * 1024**2
 PNG_HEADER = b"\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR"
 
 
+def bounded_dimensions(image: Image.Image) -> tuple[int, int]:
+    width, height = image.size
+    if not (0 < width <= 8192 and 0 < height <= 8192 and width * height <= 32_000_000):
+        raise ValueError("Image dimensions exceed the limit")
+    return width, height
+
+
 def png_dimensions(data: bytes, limit: int = MAX_RESULT) -> tuple[int, int]:
     if not isinstance(data, bytes) or len(data) > limit or not data.startswith(PNG_HEADER):
         raise ValueError("Expected PNG within the byte limit")
@@ -38,13 +45,11 @@ def png_dimensions(data: bytes, limit: int = MAX_RESULT) -> tuple[int, int]:
         raise ValueError("PNG is missing its final chunk")
     try:
         with Image.open(BytesIO(data), formats=["PNG"]) as image:
-            width, height = image.size
-            if not (0 < width <= 8192 and 0 < height <= 8192 and width * height <= 32_000_000):
-                raise ValueError("PNG dimensions exceed the limit")
+            dimensions = bounded_dimensions(image)
             image.load()
     except (OSError, SyntaxError, EOFError, struct.error, zlib.error, Image.DecompressionBombError) as exc:
         raise ValueError("Invalid PNG") from exc
-    return width, height
+    return dimensions
 
 
 def decode_base64(encoded: str, limit: int) -> bytes:

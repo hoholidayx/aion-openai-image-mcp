@@ -9,10 +9,14 @@ from PIL import Image
 from .base import ImageRequest, ProviderError
 from .openai_images import OpenAIImages
 from ..config import Profile
-from ..images import PNG_HEADER
+from ..images import PNG_HEADER, bounded_dimensions
 
 
 class AiWaveGrokImages(OpenAIImages):
+    def validate_options(self, profile: Profile) -> None:
+        if profile.supports_edits:
+            raise ValueError("The aiwave_grok adapter only supports image generation")
+
     def request_fields(self, profile: Profile, request: ImageRequest) -> dict[str, str]:
         fields = {"response_format": "b64_json"}
         if request.size and request.size != "auto":
@@ -29,9 +33,7 @@ class AiWaveGrokImages(OpenAIImages):
             return image
         try:
             with Image.open(BytesIO(image), formats=["JPEG", "WEBP"]) as source:
-                width, height = source.size
-                if not (0 < width <= 8192 and 0 < height <= 8192 and width * height <= 32_000_000):
-                    raise ValueError("Image dimensions exceed the limit")
+                bounded_dimensions(source)
                 if getattr(source, "is_animated", False):
                     raise ValueError("Animated images are unsupported")
                 with source.convert("RGBA" if "A" in source.getbands() else "RGB") as converted:

@@ -148,6 +148,10 @@ def test_restart_never_resubmits_a_claimed_job_and_adapter_is_replaceable(tmp_pa
         return {"asset": {"body": base64.b64encode(PNG).decode()}}
 
     class DifferentSupplier:
+        def validate_profile(self, profile):
+            if not profile.options.get("engine"):
+                raise ValueError("An engine is required")
+
         async def generate(self, profile, request, client):
             response = vendor_generate({
                 "deployment": profile.model, "caption": request.prompt,
@@ -207,6 +211,13 @@ def test_aiwave_requests_base64_and_normalizes_jpeg(model):
             )
 
     assert png_dimensions(asyncio.run(call())) == (6, 4)
+
+
+def test_openai_rejects_unrecognized_quality_at_startup(tmp_path):
+    profile = Profile("example", "openai_images", Connection("https://gateway.example/v1", "test-key"),
+                      "example-image", quality={"fast": "unknown"})
+    with pytest.raises(ValueError, match="OpenAI quality must be"):
+        create_app(Config(tmp_path, "synthetic-mcp", {profile.name: profile}))
 
 
 @pytest.mark.parametrize(

@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from aion_openai_image_mcp import manage
+from aion_openai_image_mcp.config import Config, Connection, Profile
 
 
 @pytest.fixture
@@ -52,3 +53,16 @@ def test_start_rejects_unmanaged_port(service, monkeypatch):
 
     with pytest.raises(RuntimeError, match="occupied by an unmanaged listener"):
         service.start()
+
+
+def test_restart_rejects_unsupported_aiwave_editing_before_managing_processes(tmp_path, monkeypatch, capsys):
+    profile = Profile("example", "aiwave_grok", Connection("https://gateway.example/v1", "test-key"),
+                      "example-image", supports_edits=True)
+    config = Config(tmp_path, "synthetic-mcp", {profile.name: profile})
+    monkeypatch.setattr(manage.os, "umask", lambda _mode: None)
+    monkeypatch.setattr(manage, "load_config", lambda *_args, **_kwargs: config)
+    monkeypatch.setattr(manage, "ServiceManager", lambda *_args: pytest.fail("unexpected service operation"))
+    monkeypatch.setattr(manage.sys, "argv", ["aion-image-mcp-service", "restart"])
+
+    assert manage.main() == 1
+    assert "only supports image generation" in capsys.readouterr().err

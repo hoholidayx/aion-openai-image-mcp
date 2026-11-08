@@ -110,24 +110,18 @@ def load_config(path: Path = DEFAULT_CONFIG, *, require_credentials: bool = True
             if not isinstance(model, str) or not model.strip() or type(edits) is not bool:
                 raise ValueError("Profiles require a model ID and a boolean supports_edits")
             if not isinstance(quality, dict) or not all(
-                key in {"fast", "quality"} and value in {"low", "medium", "high", "auto"}
+                key in {"fast", "quality"} and isinstance(value, str) and value.strip()
                 for key, value in quality.items()
             ):
-                raise ValueError("Quality maps fast or quality to an OpenAI quality value")
+                raise ValueError("Quality maps fast or quality to a nonempty supplier value")
             adapter = entry.get("adapter", "openai_images")
             if not isinstance(adapter, str) or not adapter:
                 raise ValueError("Expected a nonempty adapter ID")
-            connection_name = entry["connection"]
-            if adapter in {"openai_images", "aiwave_grok"} and "api_key_env" not in connection_settings[connection_name]:
-                raise ValueError(f"The {adapter} adapter needs an api_key_env")
             options = entry.get("options", {})
             if not isinstance(options, dict):
                 raise ValueError("Adapter options must be a table")
             json.dumps(options, allow_nan=False)
-            if adapter == "openai_images" and "default_quality" in options:
-                if options["default_quality"] not in ("low", "medium", "high", "auto"):
-                    raise ValueError("OpenAI default_quality must be low, medium, high, or auto")
-            profiles[name] = Profile(name, adapter, connections[connection_name], model, edits, quality, options)
+            profiles[name] = Profile(name, adapter, connections[entry["connection"]], model, edits, quality, options)
         if not profiles:
             raise ValueError("Configure at least one image profile")
         data_dir = Path(raw.get("data_dir", str(DEFAULT_CONFIG.parent))).expanduser().resolve()

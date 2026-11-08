@@ -46,9 +46,9 @@ chmod 600 ~/.aion-openai-image-mcp/config.toml
 ## 适配与恢复
 
 - 首版 `openai_images` 使用 Base URL 下的 `/images/generations` 和 `/images/edits`。开启 `supports_edits` 才接受 PNG 参考图。尺寸支持 `auto` 或 `WIDTHxHEIGHT`，不传尺寸时由供应商决定。可选的 `quality` 映射将 Aion 的 `fast` 和 `quality` 转成上游值。没有命中映射时可以通过 profile 的 `options.default_quality` 设置默认质量。
-- `aiwave_grok` 用于 AiWave 的 Grok Imagine 文生图。普通档和质量档配置为不同的模型 ID。适配器请求 Base64 结果，将 JPEG 或 WebP 转为 PNG，并将尺寸转换为宽高比。
+- `aiwave_grok` 用于 AiWave 的 Grok Imagine 文生图，`supports_edits` 必须为 `false`。普通档和质量档配置为不同的模型 ID。适配器请求 Base64 结果，将 JPEG 或 WebP 转为 PNG，并将尺寸转换为宽高比。
 - 输出接收单张 PNG 的 `b64_json` 或 URL。下载只允许供应商来源及显式配置的 CDN 来源，不转发供应商令牌，也不跟随重定向。供应商连接默认使用 HTTPS，环回地址可用于本机模拟和本地服务。
-- 增加供应商时，在 `adapters/` 实现自己的请求和结果映射，在显式注册表加入 adapter ID，再为它配置 profile。专用参数可放在 profile 的 `options` 表，额外凭据用连接的 `secret_env` 表映射到环境变量。MCP 的三个工具和 SQLite 任务处理可复用。
+- 增加供应商时，在 `adapters/` 实现 profile 校验、请求和结果映射，在显式注册表加入 adapter ID，再为它配置 profile。专用参数可放在 profile 的 `options` 表，额外凭据用连接的 `secret_env` 表映射到环境变量。MCP 的三个工具和 SQLite 任务处理可复用。
 - Aion 重启不会影响独立 worker。MCP 自己重启后继续处理未发出的请求。对已发出且无法确认结果的付费请求返回 `submission_uncertain`，不重发。图片在 MCP 保留七天，已被 Aion 取回的图片继续由原会话保存。过期任务保留轻量幂等记录。
 
 ```sh

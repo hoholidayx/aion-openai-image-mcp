@@ -5,6 +5,7 @@ import asyncio
 import base64
 from contextlib import AsyncExitStack, asynccontextmanager, suppress
 from hmac import compare_digest
+from importlib.metadata import version
 import json
 import logging
 import os
@@ -21,7 +22,7 @@ from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Route
 import uvicorn
 
-from .adapters import ADAPTERS
+from .adapters import validate_profiles
 from .config import Config, DEFAULT_CONFIG, Profile, SERVICE, load_config
 from .images import MAX_REQUEST_BODY, validate_references
 from .jobs import JobError, Jobs
@@ -100,7 +101,7 @@ def profile_app(profile: Profile, jobs: Jobs, wake: asyncio.Event, is_ready, hos
         except JobError as exc:
             return structured({"error_code": exc.code, "message": str(exc)}, error=True)
 
-    server = Server(SERVICE, version="0.1.0", on_list_tools=list_tools, on_call_tool=call_tool,
+    server = Server(SERVICE, version=version(SERVICE), on_list_tools=list_tools, on_call_tool=call_tool,
                     get_tool_input_schema=schemas.get)
     return server.streamable_http_app(
         streamable_http_path=f"/mcp/{profile.name}", stateless_http=True, json_response=True,
@@ -110,8 +111,7 @@ def profile_app(profile: Profile, jobs: Jobs, wake: asyncio.Event, is_ready, hos
 
 
 def create_app(config: Config):
-    if any(profile.adapter not in ADAPTERS for profile in config.profiles.values()):
-        raise ValueError("A configured profile has an unknown adapter")
+    validate_profiles(config)
     jobs = Jobs(config.data_dir)
     wake = asyncio.Event()
     worker = None

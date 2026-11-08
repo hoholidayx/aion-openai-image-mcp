@@ -31,6 +31,7 @@ HTTP_REJECTIONS = {
     404: "provider_model_unavailable",
     429: "provider_rate_limited",
 }
+QUALITY_VALUES = ("low", "medium", "high", "auto")
 
 
 async def read_bounded(response: httpx.Response, limit: int) -> bytes:
@@ -65,6 +66,17 @@ async def response_failure(response: httpx.Response) -> ProviderError:
 
 
 class OpenAIImages:
+    def validate_profile(self, profile: Profile) -> None:
+        if not profile.connection.api_key:
+            raise ValueError(f"The {profile.adapter} adapter needs an api_key_env")
+        self.validate_options(profile)
+
+    def validate_options(self, profile: Profile) -> None:
+        if any(value not in QUALITY_VALUES for value in profile.quality.values()):
+            raise ValueError("OpenAI quality must be low, medium, high, or auto")
+        if "default_quality" in profile.options and profile.options["default_quality"] not in QUALITY_VALUES:
+            raise ValueError("OpenAI default_quality must be low, medium, high, or auto")
+
     def request_fields(self, profile: Profile, request: ImageRequest) -> dict[str, str]:
         payload = {}
         if request.size and request.size != "auto":

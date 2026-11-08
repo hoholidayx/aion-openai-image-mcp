@@ -25,4 +25,6 @@ class ProviderError(Exception):
 
 
 class Adapter(Protocol):
+    def validate_profile(self, profile: Profile) -> None: ...
+
     async def generate(self, profile: Profile, request: ImageRequest, client: httpx.AsyncClient) -> bytes: ...
