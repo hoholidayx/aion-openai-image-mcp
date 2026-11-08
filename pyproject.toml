@@ -1,0 +1,24 @@
+[project]
+name = "aion-openai-image-mcp"
+version = "0.1.0"
+description = "Persistent asynchronous image jobs for Aion and HTTP image providers"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "httpx>=0.28,<1",
+    "mcp>=2.3,<3",
+    "Pillow>=11.3",
+    "pydantic>=2.12,<3",
+    "starlette>=0.49,<2",
+    "uvicorn>=0.31,<1",
+]
+
+[project.scripts]
+aion-image-mcp = "aion_openai_image_mcp.server:main"
+aion-image-mcp-service = "aion_openai_image_mcp.manage:main"
+
+[dependency-groups]
+dev = ["pytest>=8,<10"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

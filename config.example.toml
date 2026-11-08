@@ -1,0 +1,18 @@
+port = 8790
+token_env = "AION_IMAGE_MCP_TOKEN"
+
+[connections.example]
+base_url = "https://images.example.com/v1"
+api_key_env = "EXAMPLE_IMAGE_API_KEY"
+# Optional exact CDN origins for URL responses, without paths.
+result_origins = []
+
+[profiles.example]
+adapter = "openai_images"
+connection = "example"
+model = "example-image-model"
+supports_edits = true
+
+[profiles.example.quality]
+fast = "low"
+quality = "high"
