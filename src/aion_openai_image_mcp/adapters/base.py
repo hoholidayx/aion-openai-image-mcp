@@ -17,8 +17,10 @@ class ImageRequest:
 
 
 class ProviderError(Exception):
-    def __init__(self, code: str):
+    def __init__(self, code: str, *, http_status: int | None = None, provider_code: str | None = None):
         self.code = code
+        self.http_status = http_status
+        self.provider_code = provider_code
         super().__init__(code)
 
 

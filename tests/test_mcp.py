@@ -207,3 +207,36 @@ def test_aiwave_requests_base64_and_normalizes_jpeg(model):
             )
 
     assert png_dimensions(asyncio.run(call())) == (6, 4)
+
+
+@pytest.mark.parametrize(
+    ("status", "supplier_code", "expected", "retained_code"),
+    [
+        (403, "insufficient_user_quota", "provider_quota", "insufficient_user_quota"),
+        (400, "model_not_found", "provider_model_unavailable", "model_not_found"),
+        (400, "private-unknown-code", "provider_request_rejected", None),
+        (429, None, "provider_rate_limited", None),
+        (502, None, "submission_uncertain", None),
+    ],
+)
+def test_supplier_rejection_keeps_safe_reason(status, supplier_code, expected, retained_code):
+    from aion_openai_image_mcp.adapters.base import ImageRequest, ProviderError
+
+    profile = Profile("grok", "aiwave_grok", Connection("https://gateway.example/v1", "test-key"), "fixture")
+    body = json.dumps({"error": {"code": supplier_code, "message": "private upstream text"}}).encode()
+
+    async def call():
+        async def supplier(_request):
+            return httpx.Response(status, stream=httpx.ByteStream(body))
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(supplier)) as client:
+            await ADAPTERS["aiwave_grok"].generate(
+                profile, ImageRequest("Draw a square", "3:4", None, ()), client,
+            )
+
+    with pytest.raises(ProviderError) as result:
+        asyncio.run(call())
+    assert result.value.code == expected
+    assert result.value.http_status == status
+    assert result.value.provider_code == retained_code
+    assert str(result.value) == expected

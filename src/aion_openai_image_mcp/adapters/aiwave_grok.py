@@ -18,7 +18,7 @@ class AiWaveGrokImages(OpenAIImages):
         if request.size and request.size != "auto":
             size = re.fullmatch(r"([1-9][0-9]{0,4})[x:]([1-9][0-9]{0,4})", request.size)
             if size is None:
-                raise ProviderError("generation_failed")
+                raise ProviderError("invalid_size")
             width, height = map(int, size.groups())
             divisor = gcd(width, height)
             fields["aspect_ratio"] = f"{width // divisor}:{height // divisor}"

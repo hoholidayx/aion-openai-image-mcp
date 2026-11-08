@@ -195,7 +195,7 @@ class Jobs:
             ) as client:
                 image = await ADAPTERS[profile.adapter].generate(profile, request, client)
         except ProviderError as exc:
-            self._failure(row, exc.code)
+            self._failure(row, exc.code, http_status=exc.http_status, provider_code=exc.provider_code)
             return
         except Exception:
             # A supplier SDK can raise unexpected exceptions containing request data.
@@ -209,6 +209,8 @@ class Jobs:
         self.finish(row, "completed", image=image, dimensions=dimensions)
         LOG.info("Image task completed: %s/%s", row["profile"], row["task_id"])
 
-    def _failure(self, row: sqlite3.Row, code: str) -> None:
+    def _failure(self, row: sqlite3.Row, code: str, *, http_status: int | None = None,
+                 provider_code: str | None = None) -> None:
         self.finish(row, UNCERTAIN if code == UNCERTAIN else "failed", error=code)
-        LOG.warning("Image task failed: %s/%s (%s)", row["profile"], row["task_id"], code)
+        LOG.warning("Image task failed: %s/%s (%s, HTTP %s, provider code %s)",
+                    row["profile"], row["task_id"], code, http_status or "-", provider_code or "-")
