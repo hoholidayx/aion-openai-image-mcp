@@ -28,7 +28,7 @@ chmod 600 ~/.aion-openai-image-mcp/config.toml
 
 ## 导入 Aion
 
-在「设置 → 工具 → MCP」导入以下 JSON，将占位令牌替换成实际的 MCP 访问令牌，并启用入口。URL 最后一段是 profile 名，多个 profile 分别导入。全局默认只设一个。
+在「设置 → 工具 → MCP」导入以下 JSON，将占位令牌替换成实际的 MCP 访问令牌，并启用入口。URL 最后一段是 profile 名，多个 profile 分别导入。导入只配置连接。全局默认生图后端在 Aion 的「设置 → 工具」单独选择。
 
 ```json
 {
@@ -37,8 +37,7 @@ chmod 600 ~/.aion-openai-image-mcp/config.toml
       "type": "streamable_http",
       "url": "http://127.0.0.1:8790/mcp/example",
       "headers": {"Authorization": "Bearer REPLACE_WITH_MCP_TOKEN"},
-      "purpose": "async_image",
-      "is_default": true
+      "purpose": "async_image"
     }
   }
 }
