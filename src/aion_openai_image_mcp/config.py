@@ -118,8 +118,8 @@ def load_config(path: Path = DEFAULT_CONFIG, *, require_credentials: bool = True
             if not isinstance(adapter, str) or not adapter:
                 raise ValueError("Expected a nonempty adapter ID")
             connection_name = entry["connection"]
-            if adapter == "openai_images" and "api_key_env" not in connection_settings[connection_name]:
-                raise ValueError("The OpenAI Images adapter needs an api_key_env")
+            if adapter in {"openai_images", "aiwave_grok"} and "api_key_env" not in connection_settings[connection_name]:
+                raise ValueError(f"The {adapter} adapter needs an api_key_env")
             options = entry.get("options", {})
             if not isinstance(options, dict):
                 raise ValueError("Adapter options must be a table")

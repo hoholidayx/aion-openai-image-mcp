@@ -1,5 +1,6 @@
 """Reference adapter for the documented OpenAI Images request and response shapes."""
 
+import asyncio
 import json
 import re
 
@@ -22,8 +23,8 @@ async def read_bounded(response: httpx.Response, limit: int) -> bytes:
 
 
 class OpenAIImages:
-    async def generate(self, profile: Profile, request: ImageRequest, client: httpx.AsyncClient) -> bytes:
-        payload = {"model": profile.model, "prompt": request.prompt}
+    def request_fields(self, profile: Profile, request: ImageRequest) -> dict[str, str]:
+        payload = {}
         if request.size and request.size != "auto":
             if not re.fullmatch(r"[1-9][0-9]{0,4}x[1-9][0-9]{0,4}", request.size):
                 raise ProviderError("generation_failed")
@@ -31,6 +32,13 @@ class OpenAIImages:
         quality = profile.quality.get(request.preset, profile.options.get("default_quality"))
         if quality is not None:
             payload["quality"] = quality
+        return payload
+
+    def normalize_result(self, image: bytes) -> bytes:
+        return image
+
+    async def generate(self, profile: Profile, request: ImageRequest, client: httpx.AsyncClient) -> bytes:
+        payload = {"model": profile.model, "prompt": request.prompt, **self.request_fields(profile, request)}
         url = profile.connection.base_url + "/images/"
         if request.images:
             if not profile.supports_edits:
@@ -58,10 +66,12 @@ class OpenAIImages:
                 raise ValueError("Expected a single image")
             image = entries[0]
             if isinstance(image.get("b64_json"), str):
-                return decode_base64(image["b64_json"], MAX_RESULT)
-            if isinstance(image.get("url"), str):
-                return await self._download(profile, image["url"], client)
-            raise ValueError("Missing image data")
+                result = decode_base64(image["b64_json"], MAX_RESULT)
+            elif isinstance(image.get("url"), str):
+                result = await self._download(profile, image["url"], client)
+            else:
+                raise ValueError("Missing image data")
+            return await asyncio.to_thread(self.normalize_result, result)
         except (KeyError, TypeError, ValueError) as exc:
             raise ProviderError("output_invalid") from exc
 

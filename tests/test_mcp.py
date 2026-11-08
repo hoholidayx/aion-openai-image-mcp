@@ -8,6 +8,7 @@ from threading import Thread
 import time
 
 from PIL import Image
+import httpx
 import pytest
 from starlette.testclient import TestClient
 
@@ -180,3 +181,29 @@ def test_restart_never_resubmits_a_claimed_job_and_adapter_is_replaceable(tmp_pa
 def test_corrupt_png_is_rejected(damaged):
     with pytest.raises(ValueError):
         png_dimensions(damaged)
+
+
+@pytest.mark.parametrize("model", ["grok-imagine-image", "grok-imagine-image-quality"])
+def test_aiwave_requests_base64_and_normalizes_jpeg(model):
+    from aion_openai_image_mcp.adapters.base import ImageRequest
+
+    jpeg = BytesIO()
+    Image.new("RGB", (6, 4), "blue").save(jpeg, format="JPEG")
+    body = json.dumps({"data": [{"b64_json": base64.b64encode(jpeg.getvalue()).decode()}]}).encode()
+    profile = Profile("grok", "aiwave_grok", Connection("https://gateway.example/v1", "test-key"), model)
+
+    async def call():
+        async def supplier(request):
+            assert request.url.path == "/v1/images/generations"
+            assert request.headers["Authorization"] == "Bearer test-key"
+            assert json.loads(request.content) == {
+                "model": model, "prompt": "Draw a blue square", "aspect_ratio": "3:2", "response_format": "b64_json",
+            }
+            return httpx.Response(200, stream=httpx.ByteStream(body))
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(supplier)) as client:
+            return await ADAPTERS["aiwave_grok"].generate(
+                profile, ImageRequest("Draw a blue square", "1536x1024", "quality", ()), client,
+            )
+
+    assert png_dimensions(asyncio.run(call())) == (6, 4)
